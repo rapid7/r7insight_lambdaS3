@@ -203,7 +203,7 @@ def validate_uuid(uuid_string):
     try:
         val = UUID(uuid_string)
     except Exception as uuid_exc:
-        logger.error('Can not validate token: '.format(uuid_exc))
+        logger.error('Can not validate token: {}'.format(uuid_exc))
         return False
     return True
 
