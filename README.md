@@ -17,7 +17,7 @@ Follow the instructions below to send logs stored on AWS S3 to Rapid 7.
 
 2. Choose the Python blueprint for S3 objects
 
-   ![Choose Blueprint](https://raw.githubusercontent.com/rapid7/r7insight_lambdas3/master/doc/step2.png)
+   ![Choose Blueprint](doc/step2.png)
 
 3. Configure triggers:
    * Choose the bucket log files are being stored in
@@ -44,36 +44,8 @@ Follow the instructions below to send logs stored on AWS S3 to Rapid 7.
 
 7. Lambda function handler and role
    * Change the "Handler" value to ```r7insight_lambdas3.lambda_handler```
-   * Choose "Create a new role from template" from dropdown and give it a name below.
-   * Leave "Policy templates" to pre-populated value
-Sample policy to allow access to S3 by AWS Lambda:
+   * Assign or create a new role that is allowing GetObject on necessary s3 bucket(s).
 
-```
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "arn:aws:logs:*:*:*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject"
-      ],
-      "Resource": [
-        "arn:aws:s3:::*"
-      ]
-    }
-  ]
-}
-```
 
 8. Advanced settings:
    * Set memory limit to a high enough value to facilitate log parsing and sending - adjust to your needs
@@ -86,3 +58,7 @@ Sample policy to allow access to S3 by AWS Lambda:
 
 ## Gotchas:
    * The "Test" button execution in AWS Lambda will **ALWAYS** fail as the trigger is not provided by the built in test function. In order to verify, upload a sample file to source bucket
+
+
+## 3rd party dependencies:
+   * [python-certifi](https://github.com/certifi/python-certifi)
