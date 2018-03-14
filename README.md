@@ -56,9 +56,13 @@ Follow the instructions below to send logs stored on AWS S3 to Rapid 7.
 9. Enable function:
    * Click "Create function"
 
-## Gotchas:
+## Gotchas
    * The "Test" button execution in AWS Lambda will **ALWAYS** fail as the trigger is not provided by the built in test function. In order to verify, upload a sample file to source bucket
 
 
-## 3rd party dependencies:
+## 3rd party dependencies
    * [python-certifi](https://github.com/certifi/python-certifi)
+   
+
+## Contact Support
+   * Please email our support team at support@rapid7.com if you need any help.
