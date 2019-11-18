@@ -79,7 +79,3 @@ Follow the instructions below to send logs stored on AWS S3 to Rapid 7.
 
 ## 3rd party dependencies
    * [python-certifi](https://github.com/certifi/python-certifi)
-   
-
-## Contact Support
-   * Please email our support team at support@rapid7.com if you need any help.
