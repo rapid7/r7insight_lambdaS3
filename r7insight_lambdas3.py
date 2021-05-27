@@ -22,7 +22,7 @@ logger.info('Loading function...')
 s3 = boto3.client('s3')
 
 REGION = os.environ.get('region')
-ENDPOINT = '{}.data.logs.insight.rapid7.com'.format(REGION)
+ENDPOINT = f'{REGION}.data.logs.insight.rapid7.com'
 PORT = 20000
 TOKEN = os.environ.get('token')
 
@@ -31,7 +31,7 @@ def lambda_handler(event, context):
     sock = create_socket()
 
     if not validate_uuid(TOKEN):
-        logger.critical('{} is not a valid token. Exiting.'.format(TOKEN))
+        logger.critical(f'{TOKEN} is not a valid token. Exiting.')
         raise SystemExit
     else:
         # Get the object from the event and show its content type
@@ -39,7 +39,7 @@ def lambda_handler(event, context):
         key = urllib.unquote_plus(event['Records'][0]['s3']['object']['key']).decode('utf8')
         try:
             response = s3.get_object(Bucket=bucket, Key=key)
-            logger.info('Fetched file {} from S3 bucket {}'.format(key, bucket))
+            logger.info(f'Fetched file {key} from S3 bucket {bucket}')
             body = response['Body']
             data = body.read()
             # If the name has a .gz extension, then decompress the data
@@ -52,13 +52,13 @@ def lambda_handler(event, context):
                         data = gz.read()
 
             lines = data.split("\n")
-            logger.info('Total number of lines: {}'.format(len(list(lines))))
+            logger.info(f'Total number of lines: {len(list(lines))}')
 
             if validate_elb_log(str(key)) is True:
                 # timestamp elb client:port backend:port request_processing_time backend_processing_time
                 # response_processing_time elb_status_code backend_status_code received_bytes sent_bytes
                 # "request" "user_agent" ssl_cipher ssl_protocol
-                logger.info('File={} is AWS ELB log format. Parsing and sending to R7'.format(key))
+                logger.info(f'File={key} is AWS ELB log format. Parsing and sending to R7')
                 rows = csv.reader(data.splitlines(), delimiter=' ', quotechar='"')
                 for line in rows:
                     request = line[11].split(' ')
@@ -83,10 +83,10 @@ def lambda_handler(event, context):
                         'ssl_protocol': line[14]
                     }
                     msg = json.dumps(parsed)
-                    sock.sendall('{} {}\n'.format(TOKEN, msg))
-                logger.info('Finished sending file={} to R7'.format(key))
+                    sock.sendall(f'{TOKEN} {msg}\n')
+                logger.info(f'Finished sending file={key} to R7')
             elif validate_alb_log(str(key)) is True:
-                logger.info('File={} is AWS ALB log format. Parsing and sending to R7'.format(key))
+                logger.info(f'File={key} is AWS ALB log format. Parsing and sending to R7')
                 rows = csv.reader(data.splitlines(), delimiter=' ', quotechar='"')
                 total_run_count = 0
                 good_run_count = 0
@@ -121,23 +121,23 @@ def lambda_handler(event, context):
                             'trace_id': line[17]
                         }
                         msg = json.dumps(parsed)
-                        sock.sendall('{} {}\n'.format(TOKEN, msg))
+                        sock.sendall(f'{TOKEN} {msg}\n')
                         good_run_count += 1
                     except IndexError:
                         bad_run_count += 1
-                        logger.info('[ALB logs] bad log line: {}'.format(line))
+                        logger.info(f'[ALB logs] bad log line: {line}')
                         pass
-                logger.info('[ALB logs] total run count: {}'.format(total_run_count))
-                logger.info('[ALB logs] processed-and-sent run count: {}'.format(good_run_count))
-                logger.info('[ALB logs] bad run count: {}'.format(bad_run_count))
-                logger.info('Finished sending file={} to R7'.format(key))
+                logger.info(f'[ALB logs] total run count: {total_run_count}')
+                logger.info(f'[ALB logs] processed-and-sent run count: {good_run_count}')
+                logger.info(f'[ALB logs] bad run count: {bad_run_count}')
+                logger.info(f'Finished sending file={key} to R7')
             elif validate_cf_log(str(key)) is True:
                 # date time x-edge-location sc-bytes c-ip cs-method cs(Host)
                 # cs-uri-stem sc-status cs(Referer) cs(User-Agent) cs-uri-query
                 # cs(Cookie) x-edge-result-type x-edge-request-id x-host-header
                 # cs-protocol cs-bytes time-taken x-forwarded-for ssl-protocol
                 # ssl-cipher x-edge-response-result-type
-                logger.info('File={} is AWS CloudFront log format. Parsing and sending to R7'.format(key))
+                logger.info(f'File={key} is AWS CloudFront log format. Parsing and sending to R7')
                 rows = csv.reader(data.splitlines(), delimiter='\t', quotechar='"')
                 for line in rows:
                     # Skip headers and lines with insufficient values
@@ -153,21 +153,21 @@ def lambda_handler(event, context):
                           " x_forwarded_for=\"{19}\" ssl_protocol=\"{20}\"" \
                           " ssl_cipher=\"{21}\" x_edge_response_result_type=\"{22}\"\n" \
                         .format(*line)
-                    sock.sendall('{} {}\n'.format(TOKEN, msg))
-                logger.info('Finished sending file={} to R7'.format(key))
+                    sock.sendall(f'{TOKEN} {msg}\n')
+                logger.info(f'Finished sending file={key} to R7')
             elif validate_ct_log(str(key)) is True:
-                logger.info('File={} is AWS CloudTrail log format. Parsing and sending to R7'.format(key))
+                logger.info(f'File={key} is AWS CloudTrail log format. Parsing and sending to R7')
                 cloud_trail = json.loads(data)
                 for event in cloud_trail['Records']:
-                    sock.sendall('{} {}\n'.format(TOKEN, json.dumps(event)))
-                logger.info('Finished sending file={} to R7'.format(key))
+                    sock.sendall(f'{TOKEN} {json.dumps(event)}\n')
+                logger.info(f'Finished sending file={key} to R7')
             else:
-                logger.info('File={} is unrecognized log format. Sending raw lines to R7'.format(key))
+                logger.info(f'File={key} is unrecognized log format. Sending raw lines to R7')
                 for line in lines:
-                    sock.sendall('{} {}\n'.format(TOKEN, line))
-                logger.info('Finished sending file={} to R7'.format(key))
+                    sock.sendall(f'{TOKEN} {line}\n')
+                logger.info(f'Finished sending file={key} to R7')
         except Exception as e:
-            logger.error('Exception: {}'.format(e))
+            logger.error(f'Exception: {e}')
         finally:
             sock.close()
             logger.info('Function execution finished.')
@@ -192,18 +192,19 @@ def create_socket():
         suppress_ragged_eofs=True,
     )
     try:
-        logger.info('Connecting to {}:{}'.format(ENDPOINT, PORT))
+        logger.info(f'Connecting to {ENDPOINT}:{PORT}')
         s.connect((ENDPOINT, PORT))
         return s
-    except socket.error, exc:
-        logger.error('Exception socket.error : {}'.format(exc))
+    except socket.error as exc:
+        logger.error(f'Exception socket.error : {exc}')
         raise SystemExit
+
 
 def validate_uuid(uuid_string):
     try:
         val = UUID(uuid_string)
     except Exception as uuid_exc:
-        logger.error('Can not validate token: {}'.format(uuid_exc))
+        logger.error(f'Can not validate token: {uuid_exc}')
         return False
     return True
 
