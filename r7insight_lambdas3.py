@@ -36,20 +36,22 @@ def lambda_handler(event, context):
     else:
         # Get the object from the event and show its content type
         bucket = event['Records'][0]['s3']['bucket']['name']
-        key = urllib.unquote_plus(event['Records'][0]['s3']['object']['key']).decode('utf8')
+        key = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'])
         try:
             response = s3.get_object(Bucket=bucket, Key=key)
             logger.info(f'Fetched file {key} from S3 bucket {bucket}')
             body = response['Body']
-            data = body.read()
+
             # If the name has a .gz extension, then decompress the data
             if key[-3:] == '.gz':
                 with tempfile.TemporaryFile() as temporary_file:
-                    temporary_file.write(data)
+                    temporary_file.write(body.read())
                     temporary_file.seek(0)
 
                     with gzip.GzipFile(fileobj=temporary_file, mode="r") as gz:
-                        data = gz.read()
+                        data = gz.read().decode('utf-8')
+            else:
+                data = body.read().decode('utf8')
 
             lines = data.split("\n")
             logger.info(f'Total number of lines: {len(list(lines))}')
@@ -83,7 +85,8 @@ def lambda_handler(event, context):
                         'ssl_protocol': line[14]
                     }
                     msg = json.dumps(parsed)
-                    sock.sendall(f'{TOKEN} {msg}\n')
+                    message = f'{TOKEN} {msg}\n'
+                    sock.sendall(message.encode('utf-8'))
                 logger.info(f'Finished sending file={key} to R7')
             elif validate_alb_log(str(key)) is True:
                 logger.info(f'File={key} is AWS ALB log format. Parsing and sending to R7')
@@ -121,7 +124,8 @@ def lambda_handler(event, context):
                             'trace_id': line[17]
                         }
                         msg = json.dumps(parsed)
-                        sock.sendall(f'{TOKEN} {msg}\n')
+                        message = f'{TOKEN} {msg}\n'
+                        sock.sendall(message.encode('utf-8'))
                         good_run_count += 1
                     except IndexError:
                         bad_run_count += 1
@@ -153,18 +157,21 @@ def lambda_handler(event, context):
                           " x_forwarded_for=\"{19}\" ssl_protocol=\"{20}\"" \
                           " ssl_cipher=\"{21}\" x_edge_response_result_type=\"{22}\"\n" \
                         .format(*line)
-                    sock.sendall(f'{TOKEN} {msg}\n')
+                    message = f'{TOKEN} {msg}\n'
+                    sock.sendall(message.encode('utf-8'))
                 logger.info(f'Finished sending file={key} to R7')
             elif validate_ct_log(str(key)) is True:
                 logger.info(f'File={key} is AWS CloudTrail log format. Parsing and sending to R7')
                 cloud_trail = json.loads(data)
                 for event in cloud_trail['Records']:
-                    sock.sendall(f'{TOKEN} {json.dumps(event)}\n')
+                    message = f'{TOKEN} {json.dumps(event)}\n'
+                    sock.sendall(message.encode('utf-8'))
                 logger.info(f'Finished sending file={key} to R7')
             else:
                 logger.info(f'File={key} is unrecognized log format. Sending raw lines to R7')
                 for line in lines:
-                    sock.sendall(f'{TOKEN} {line}\n')
+                    message = f'{TOKEN} {line}\n'
+                    sock.sendall(message.encode('utf-8'))
                 logger.info(f'Finished sending file={key} to R7')
         except Exception as e:
             logger.error(f'Exception: {e}')
