@@ -17,7 +17,7 @@ Follow the instructions below to send logs stored on AWS S3 to Rapid 7.
 
 2. Choose the appropriate Python blueprint for S3 objects
 
-   ![Choose Blueprint](doc/step2.png)
+   ![Choose Blueprint](doc/logging_from_s3_via_lambda_blueprint_selection.png)
 
 3. Configure function:
    * Give your function a name
@@ -26,17 +26,16 @@ Follow the instructions below to send logs stored on AWS S3 to Rapid 7.
    
 4. Configure triggers:
    * Choose the bucket log files are being stored in
-   * Set event type "All object create events (All)"
-   * Tick "Enable Trigger" checkbox
+   * Set event type "All object create events"
 
 5. Click "Create function"
 
 6. Upload function code:
    * Create a .ZIP file, containing ```r7insight_lambdas3.py``` and the folder ```certifi```
      * Make sure the files and ```certifi``` folder are in the **root** of the ZIP archive
-   * Go to "Function code" section of lambda setup
-   * Choose "Upload a .zip file" in "Code entry type" dropdown and upload the archive created in previous step
-   * Choose your python runtime version from "Runtime" dropdown
+   * Go to "Code source" section of lambda setup
+   * Choose ".zip file" in "Upload from" dropdown and upload the archive created in previous step
+   * Set Python runtime version to ```Python 3.9``` by editing "Runtime settings" section 
    * Set handler name to ```r7insight_lambdas3.lambda_handler```
    
    Working example file structure:
@@ -55,7 +54,9 @@ Follow the instructions below to send logs stored on AWS S3 to Rapid 7.
    
    `Note: Zip files downloaded via github puts all the files under a subdirectory; thefore, uploading the downloaded zip directly to AWS will not work.`
 
-7. Set Environment Variables:
+7. Select configuration tab, edit "General configuration" to change memory and timeout limits
+
+8. Add the following Environment Variables:
    * Token value should match UUID provided by Rapid 7 UI or API
    * Region should be that of your R7 account
 
@@ -64,17 +65,8 @@ Follow the instructions below to send logs stored on AWS S3 to Rapid 7.
    | region    | InsightOps region(eu,us etc)|
    | token     | Token UUID                  |
 
-8. Advanced settings:
-   * Set memory limit to a high enough value to facilitate log parsing and sending - adjust to your needs
-   * Set timeout to a high enough value to facilitate log parsing and sending - adjust to your needs
-   * Leave VPC value to "No VPC" as the script only needs S3 access
-     * If you choose to use VPC, please consult [Amazon Documentation](http://docs.aws.amazon.com/lambda/latest/dg/vpc.html)
-
-9. Enable function:
-   * Click "Create function"
-
 ## Gotchas
-   * The "Test" button execution in AWS Lambda will **ALWAYS** fail as the trigger is not provided by the built in test function. In order to verify, upload a sample file to source bucket
+   * The "Test" execution in AWS Lambda will **ALWAYS** fail as the test event does not refer to an existing S3 object. In order to verify, upload a sample file to source bucket
 
 
 ## 3rd party dependencies
