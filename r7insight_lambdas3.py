@@ -7,7 +7,6 @@ import ssl
 import re
 import urllib
 import csv
-import zlib
 import json
 import certifi
 import os
