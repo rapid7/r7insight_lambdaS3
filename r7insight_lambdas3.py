@@ -7,7 +7,6 @@ import ssl
 import re
 import urllib
 import csv
-import zlib
 import json
 import certifi
 import os
@@ -175,6 +174,7 @@ def lambda_handler(event, context):
                 logger.info(f'Finished sending file={key} to R7')
         except Exception as e:
             logger.error(f'Exception: {e}')
+            raise e
         finally:
             sock.close()
             logger.info('Function execution finished.')
@@ -209,7 +209,7 @@ def create_socket():
 
 def validate_uuid(uuid_string):
     try:
-        val = UUID(uuid_string)
+        UUID(uuid_string)
     except Exception as uuid_exc:
         logger.error(f'Can not validate token: {uuid_exc}')
         return False
